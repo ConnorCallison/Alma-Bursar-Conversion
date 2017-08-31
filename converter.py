@@ -219,6 +219,7 @@ def clear_output_dir():
 
 
 def main():
+    print "----", time.ctime(), "----"
     input_file_name = find_file()
     all_users = parse_data(input_file_name)
     clear_output_dir()
