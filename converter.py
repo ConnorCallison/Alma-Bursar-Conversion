@@ -5,7 +5,7 @@ connor@humboldt.edu
 Alma Bursar Export -> Data Conversoin Script
 
 ***PRODUCTION VERSION***
-*** 1.0.0 ***
+*** 1.0.2 ***
 
 This script will read the specified Alma export file, and convert
 it to the required format to be importe into PeopleSoft.
@@ -13,9 +13,11 @@ it to the required format to be importe into PeopleSoft.
 from lxml import etree
 import csv
 import time
+from os import chdir
 from os import rename as mv
 from os import listdir
 import shutil
+import smtplib
 
 archival_path = 'old_xml/'
 # Path for converted files to be written.
@@ -68,13 +70,13 @@ def find_file():
             xml_count += 1
 
     if xml_count > 1:
-        print "There are %s '.xml' files in this directory. There can only be one." % (xml_count)
-        print "Please remove any .xml files that are not the target file and try again."
-        quit()
+        error = "There are %s '.xml' files in this directory. There can only be one." % (xml_count)
+        error += "\nPlease remove any .xml files that are not the target file and try again."
+        raise Exception(error)
 
     elif xml_count == 0:
-        print "No '.xml' file found. Please place the target file in the same directory as this script."
-        quit()
+        error = "No '.xml' file found. The file transfer from Alma may have failed."
+        raise Exception(error)
 
     else:
         return input_file_name
@@ -163,10 +165,13 @@ def archive_file( input_file_name, path):
 def gather_stats(all_users):
     campus_count = 0
     campus_debits = 0
+    campus_debit_count = 0
     campus_credits = 0
+    campus_credit_count =0
     community_count = 0
     community_debits = 0
     community_credits = 0
+    output_string = ''
 
 
     for user in all_users:
@@ -177,8 +182,10 @@ def gather_stats(all_users):
                 fee_type = fee.lib_code
                 if fee_type != 'CREDIT':
                     campus_debits += amount
+                    campus_debit_count += 1
                 else:
                     campus_credits += amount
+                    campus_credit_count += 1
         else:
             community_count += 1
             for fee in user.get_fees():
@@ -189,17 +196,21 @@ def gather_stats(all_users):
                 else:
                     community_credits += amount
 
-    print "Campus users:", campus_count
-    print "Campus debits: $" + str(campus_debits)
-    print "Campus credits: $" + str(campus_credits)
-    print "--"
-    print "Community users:", community_count
-    print "Community debits: $" + str(community_debits)
-    print "Community credits: $" + str(community_credits)
-    print "----"
-    print "Total debits: $" + str(campus_debits + community_debits)
-    print "Total credits: $" + str(campus_credits + community_credits)
-    print "Gross total: $" + str((campus_debits + community_debits) - (campus_credits + community_credits))
+    output_string += "\nCampus users: " + str(campus_count)
+    output_string += "\nCampus debits: $" + str(campus_debits) + ' | Transactions: ' + str(campus_debit_count)
+    output_string += "\nCampus credits: $" + str(campus_credits) + ' | Transactions: ' + str(campus_credit_count)
+    output_string += "\n--"
+    output_string += "\nCommunity users: " + str(community_count)
+    output_string += "\nCommunity debits: $" + str(community_debits)
+    output_string += "\nCommunity credits: $" + str(community_credits)
+    output_string += "\n----"
+    output_string += "\nTotal debits: $" + str(campus_debits + community_debits)
+    output_string += "\nTotal credits: $" + str(campus_credits + community_credits)
+    output_string += "\nGross total: $" + str((campus_debits + community_debits) - (campus_credits + community_credits))
+    output_string += '\n'
+
+    print output_string
+    return output_string
 
 
 def is_campus_user(username):
@@ -218,13 +229,45 @@ def clear_output_dir():
             shutil.move(output_path + input_file_name, output_path + 'old/' + input_file_name)
 
 
+def send_email(from_addr,to_addr,message):
+    try:
+        smtpObj = smtplib.SMTP('localhost')
+        smtpObj.sendmail(from_addr, to_addr,message)
+        print "Email Sent!"
+    except Exception, e:
+        print "Email sending failed:", e
+
+
+def send_success_email(stats):
+    message = "Subject: Bursar Data Conversion - SUCCESS"
+    message += "\nTo: Library Billing Support <library-billing-support@humboldt.edu>"
+    message += "\nFrom: HSU Student Finance Jobs <no-reply@humboldt.edu>"
+    message += "\nThe Alma Bursar conversion script executed successfully!"
+    message += "\nBelow are the metrics:\n"
+    message += stats
+    send_email('no-reply@humboldt.edu','library-billing-support@humboldt.edu',message)
+
+
+def send_failure_email(error):
+    message = "Subject: Bursar Data Conversion - ERROR"
+    message += "\nTo: Library Billing Support <library-billing-support@humboldt.edu>"
+    message += "\nFrom: HSU Student Finance Jobs <no-reply@humboldt.edu>"
+    message += "\nThe Alma Bursar conversion script did not execute successfully."
+    message += "\nSee error below:\n\n"
+
+    message += str(error)
+
+    send_email('no-reply@humboldt.edu','library-billing-support@humboldt.edu',message)
+
+
 def main():
+    #chdir('/home/alma/bursar')
     print "----", time.ctime(), "----"
     input_file_name = find_file()
     all_users = parse_data(input_file_name)
     clear_output_dir()
     write_data(all_users, student_output_file_path, community_output_file_path)
-    gather_stats(all_users)
+    send_success_email(gather_stats(all_users))
     archive_file( input_file_name, archival_path)
 
 
@@ -232,4 +275,5 @@ if __name__ == '__main__':
     try:
         main()
     except Exception, e:
+        send_failure_email(e)
         print 'Error:', e
