@@ -28,6 +28,8 @@ community_output_file_path = 'output/bursar-community-%s.csv' % (
 # Namespace map for XML processing
 nsm = {"xb": "http://com/exlibris/urm/rep/externalsysfinesfees/xmlbeans"}
 
+# This dictionary allows us to switch out the library fee types for the 
+# corresponding PeopleSoft item_type.
 item_type_map = {'LIBRARYCARDREPLACEMENT': '300000005921',
                  'LOSTITEMPROCESSFEE': '300000006918',
                  'OVERDUEFINE': '300000006919',
@@ -62,6 +64,11 @@ class Fee:
 
 
 def find_file():
+    """
+    Looks for the .XML file in the current woeking directory.
+
+    NOTE: There can only be one .XML file present.
+    """
     input_file_name = ''
     xml_count = 0
     for file in listdir('.'):
@@ -83,7 +90,16 @@ def find_file():
 
 
 def parse_data(input_file):
+    """
+    Takes in an input file, loads the XML into a tree
+    traverses the file and grabs out fees and associates them
+    with a user.
+
+    Returns list of User objects.
+    """
     print "Converting Data..."
+
+    # Load XML into tree / find fees.
     users = []
     tree = etree.parse(open(input_file))
     root = tree.getroot()
@@ -95,6 +111,7 @@ def parse_data(input_file):
     userExportedFineFeesList = userExportedList.findall(
         'xb:userExportedFineFeesList', namespaces=nsm)
 
+    # Create instances of User and add their fees.
     for user_fees in userExportedFineFeesList:
         user = user_fees.find('xb:user', namespaces=nsm)
         username = user.find('xb:value', namespaces=nsm).text
@@ -129,7 +146,11 @@ def parse_data(input_file):
 
 
 def write_data(user_list, student_file_name, community_file_name):
-
+    """
+    Takes in a list of Users, student file name, and community file name.
+    Seperates the users by USEER ID, and seperates the users into their correspinding
+    files.
+    """
     student_output_file = open(student_file_name, 'w')
     output_credits = open(student_file_name.replace('DEBITS','CREDITS'), 'w')
     community_output_file = open(community_file_name, 'w')
@@ -163,6 +184,10 @@ def archive_file( input_file_name, path):
 
 
 def gather_stats(all_users):
+    """
+    Gethers basic statistics about what was read from the XML.
+    Best used for for basic validation of totals between files.
+    """
     campus_count = 0
     campus_debits = 0
     campus_debit_count = 0
@@ -214,6 +239,10 @@ def gather_stats(all_users):
 
 
 def is_campus_user(username):
+    """
+    This function is used to identify if a user ID is a valid
+    university ID.
+    """
     if len(username) == 9 and username[0] in ['0','9']:
         return True
     else:
@@ -221,6 +250,9 @@ def is_campus_user(username):
 
 
 def clear_output_dir():
+    """
+    Moves previous output files into an archival directory.
+    """
     output_path = 'output/'
     input_file_name = ''
     for file in listdir(output_path):
@@ -230,8 +262,14 @@ def clear_output_dir():
 
 
 def send_email(from_addr,to_addr,message):
+    """
+    This function sends an email.
+    Params: from_addr - address where email wil be sent from.
+            to_addr - address where email will ve sent.
+            message - string containing the content of the email.
+    """
     try:
-        smtpObj = smtplib.SMTP('localhost')
+        smtpObj = smtplib.SMTP('smtp.humboldt.edu')
         smtpObj.sendmail(from_addr, to_addr,message)
         print "Email Sent!"
     except Exception, e:
@@ -239,6 +277,10 @@ def send_email(from_addr,to_addr,message):
 
 
 def send_success_email(stats):
+    """
+    Sends an email notfying of script success and
+    delivers basic stats of the run using gather_stats()
+    """
     message = "Subject: Bursar Data Conversion - SUCCESS"
     message += "\nTo: Library Billing Support <library-billing-support@humboldt.edu>"
     message += "\nFrom: HSU Student Finance Jobs <no-reply@humboldt.edu>"
@@ -249,6 +291,10 @@ def send_success_email(stats):
 
 
 def send_failure_email(error):
+    """
+    sends an email notifying users of script failure to generate files.
+    The error is incluede in the email message.
+    """
     message = "Subject: Bursar Data Conversion - ERROR"
     message += "\nTo: Library Billing Support <library-billing-support@humboldt.edu>"
     message += "\nFrom: HSU Student Finance Jobs <no-reply@humboldt.edu>"
@@ -261,7 +307,7 @@ def send_failure_email(error):
 
 
 def main():
-    #chdir('/home/alma/bursar')
+    chdir('/home/alma/bursar')
     print "----", time.ctime(), "----"
     input_file_name = find_file()
     all_users = parse_data(input_file_name)
