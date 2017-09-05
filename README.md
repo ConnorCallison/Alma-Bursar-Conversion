@@ -54,6 +54,7 @@ This data conversion script allows for an XML file export to be converted into P
 # Screenshots:
 
 ##### Script edits:
+![alt text](https://i.imgur.com/29l1yDp.png)
 ![alt text](https://i.imgur.com/bTY48Qa.png)
 
 ##### Bursar Export Settings:
