@@ -1,7 +1,7 @@
 [![N|Solid](https://brand.humboldt.edu/sites/default/files/styles/panopoly_image_original/public/general/hsu-mark-stacked_0.png?itok=jnMrPDcd)](http://its.humboldt.edu/)
 # Alma-Bursar Data Conversion Script
 
-This data conversion script allows for an XML file export to be converted into PeopleSoft ready .dat files and .csv for accounts recoverable.
+This data conversion script allows for an XML file export to be converted into PeopleSoft ready .dat files and .csv for accounts receivable.
 
 ## Process overview:
   - Alma runs bursar export and delivers file via SFTP.
@@ -16,6 +16,10 @@ This data conversion script allows for an XML file export to be converted into P
 
 # Setup:
   - Download the Data Conversion Script.
+  - Open the script in your favorite editor and:
+    - Change email addresses where `humboldt.edu` is present.
+    - Change SMTP server hostname.
+    - (View Script Edits in Screenshot section below)
   - Identify the server that will be receiving the XML file from Alma.
   - On this server, create a user: `alma`
   - In this user's home directory, create the following folder structure:
@@ -31,6 +35,9 @@ This data conversion script allows for an XML file export to be converted into P
   - Below you will find screenshots of our alma configuration.
   
 # Screenshots:
+
+##### Script edits:
+![alt text](https://i.imgur.com/bTY48Qa.png)
 
 ##### Bursar Export Settings:
 
