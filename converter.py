@@ -37,6 +37,13 @@ item_type_map = {'LIBRARYCARDREPLACEMENT': '300000005921',
                  'LOSTITEMREPLACEMENTFEE': '300000006920'}
 
 class User:
+    """
+    The User class is a structure used to store basic
+    information about the users in the XML file.
+    
+    There will be a User generated for each user_id in the XML.
+    Users each contain a list of Fees accessible through get_fees()
+    """
 
     def __init__(self, username, name, user_type = 'campus'):
         self.username = username
@@ -148,7 +155,7 @@ def parse_data(input_file):
 def write_data(user_list, student_file_name, community_file_name):
     """
     Takes in a list of Users, student file name, and community file name.
-    Seperates the users by USEER ID, and seperates the users into their correspinding
+    Seperates the users by type (campus vs commnuity), and writes the users into their correspinding
     files.
     """
     student_output_file = open(student_file_name, 'w')
